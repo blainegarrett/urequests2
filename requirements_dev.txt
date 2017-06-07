@@ -1,0 +1,8 @@
+# Packages here will be installed locally for dev purposes only
+
+mock
+nose
+nose-exclude
+rednose
+coverage
+yanc
