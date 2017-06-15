@@ -8,7 +8,6 @@ Includes concepts from core urllib2 https://fossies.org/dox/Python-2.7.13/urllib
 
 # THIS HAS SOME BUGS WHICH BLAINE FIXED.
 
-import logging
 import socket
 try:
     import ussl as ssl
@@ -85,11 +84,11 @@ class URLOpener:
                 s.settimeout(timeout)
                 s.connect(addr)
             else:
-                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_SEC)
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP)
                 sock.settimeout(timeout)
                 s = ssl.wrap_socket(sock)
                 s.connect(socket.getaddrinfo(host, port)[0][4])
-        except socket.gaierror, e:
+        except (OSError,  TimeoutError) as e:
             # Attempt to close the socket
             if s:
                 s.close()
@@ -126,7 +125,12 @@ class URLOpener:
 
         # Finalized and send payload
         request += '\r\n'
-        s.send(request)
+        try:
+            s.send(request)
+        except OSError as e:
+            if s:
+                s.close()
+            raise URLError(e)
 
         # Read Response
         try:
@@ -137,14 +141,22 @@ class URLOpener:
 
                 self.text = u"%s%s" % (self.text, recv.decode("utf-8"))
             s.close()
-        except HTTPError, e:  # TODO: Figure out specific Exception Type
-            raise Exception(e)
+        except (socket.error,  socket.timeout) as e:
+            raise URLError(e)
 
         # Process the results
         self._parse_result()
 
     def read(self):
         return self.text
+
+    def json(self):
+        try:
+            import ujson
+            return ujson.loads(self.text)
+        except ImportError:
+            import json
+            return json.loads(self.text)
 
     def _parse_result(self):
         self.text = self.text.split(u'\r\n')
@@ -226,7 +238,11 @@ def urlopen(url, method="GET", params={}, data={}, headers={}, cookies={}, auth=
     attempts = 0
     result = URLOpener(url, method, params, data, headers, cookies, auth, timeout)
 
-    logging.warning(result.read())
+    try:
+        import logging
+        logging.warning(result.read())
+    except ImportError:
+        raise ImportError('No logging facility on this platform.')
 
     # Maximum of 4 redirects
     while attempts < 4:
