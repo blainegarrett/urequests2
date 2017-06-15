@@ -66,7 +66,7 @@ class URLOpener:
                  timeout=DEFAULT_TIMEOUT):
         self.status_code = 0
         self.headers = {}
-        self.text = u""
+        self.text = u''
         self.url = url
 
         # Parse the url into chunks
@@ -147,7 +147,7 @@ class URLOpener:
         return self.text
 
     def _parse_result(self):
-        self.text = self.text.split('\r\n')
+        self.text = self.text.split(u'\r\n')
         while self.text:
             line = self.text.pop(0).strip()
             if line == '':
@@ -160,7 +160,7 @@ class URLOpener:
                 data = line.split(':')
                 self.headers[data[0]] = (':'.join(data[1:])).strip()
                 continue
-        self.text = '\r\n'.join(self.text)
+        self.text = u'\r\n'.join(self.text)
 
         # Throw Exceptions for various status codes
         if self.status_code == 404:
